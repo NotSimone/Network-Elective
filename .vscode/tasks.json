@@ -1,0 +1,24 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "(gcc) Build",
+            "command": "gcc",
+            "args": [
+                "-g",
+                "${workspaceFolder}/${fileBasenameNoExtension}.c",
+                "-o",
+                "${workspaceFolder}/${fileBasenameNoExtension}.exe",
+                "-Wall",
+                "-Werror",
+                "-lws2_32"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
