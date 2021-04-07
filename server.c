@@ -16,14 +16,11 @@
 
 #include "network.h"
 
-#define CLIENT_HANDSHAKE "snooping-client-req"
-#define SERVER_HANDSHAKE "snooping-server-ack"
-
 void init();
 void connectClients(int32_t* handles);
+void configClientIP();
+void sendSnoopReq(int32_t client, uint32_t requestNum, uint32_t requestIdent);
 void cleanup();
-
-int32_t clientPort = 7209;
 
 int32_t serverSocketHandle = -1;
 int32_t* clientConnHandles = NULL;
@@ -39,17 +36,21 @@ int main(int argc, char * argv[]) {
 
     if (argc > 1) totalClients = atoi(argv[1]);
 
-    int32_t* fd = calloc(totalClients, sizeof(int32_t));
-    connectClients(fd);
+    clientConnHandles = calloc(totalClients, sizeof(int32_t));
+    connectClients(clientConnHandles);
+    configClientIP();
 
     // Initialise select
-    fd_set serverFdSet;
-    FD_ZERO(&serverFdSet);
+    fd_set fdSet;
+    FD_ZERO(&fdSet);
     int32_t maxFd = 0;
     for (int32_t i = 0; i < totalClients; i++) {
-        if (fd[i] > maxFd) maxFd = fd[i];
-        FD_SET(fd[i], &serverFdSet);
+        if (clientConnHandles[i] > maxFd) maxFd = clientConnHandles[i];
+        FD_SET(clientConnHandles[i], &fdSet);
     }
+
+    // Just for testing
+    sendSnoopReq(0, 1, 2);
     
 
     /*
@@ -60,25 +61,22 @@ int main(int argc, char * argv[]) {
 
     // Main loop
     while (1) {
-        fd_set copyFdSet = serverFdSet;
+        fd_set fdSetCopy = fdSet;
         // Block until a client sends to us
-        uint32_t num = select(maxFd + 1, &copyFdSet, NULL, NULL, NULL);
+        uint32_t num = select(maxFd + 1, &fdSetCopy, NULL, NULL, NULL);
         if (num < 0) {
-            printf("Error: Select timeout\n");
+            printf("Error: Select error\n");
             exit(EXIT_FAILURE);
         }
 
         // Check each client in turn until we find the ones that sent
         for (uint32_t i = 0; i < totalClients; i++) {
             int32_t clientHandle = clientConnHandles[i];
-            if (FD_ISSET(clientHandle, &copyFdSet)) {
-                // Receive from the client
-                // TODO: Actually do something here
-                // right now, all it does is echo back messages
+            if (FD_ISSET(clientHandle, &fdSetCopy)) {
                 int32_t rec = recv(clientHandle, (char *)recvBuf, sizeof(recvBuf), 0);
                 if (rec > 0) {
-                    sendAll(clientHandle, recvBuf, strlen(recvBuf) + 1);
-                    printf("%d: %s\n", i, recvBuf);
+                    SnoopedPacket* packet = (SnoopedPacket*) recvBuf;
+                    printf("Received snooped packet %u, %u, %d, %s", packet->requestIdent, packet->packetIdent, packet->messageLength, packet->message);
                     fflush(stdout);
                 } else if (rec == 0 || rec == -1) {
                     // Client closed connection
@@ -126,7 +124,7 @@ void init() {
     // Configure and bind the socket
     struct sockaddr_in serverSocketInfo = {0};
     serverSocketInfo.sin_family = AF_INET;
-    serverSocketInfo.sin_port = htons(clientPort);
+    serverSocketInfo.sin_port = htons(SERVER_PORT);
     serverSocketInfo.sin_addr.s_addr = htonl(INADDR_ANY);
 
     // Bind socket
@@ -145,7 +143,7 @@ void init() {
 
 // Connect the req number of clients and fill the array with the connection handles
 void connectClients(int32_t* handles) {
-    printf("Listening for %d clients on port %d\n", totalClients, clientPort);
+    printf("Listening for %d clients on port %d\n", totalClients, SERVER_PORT);
     fflush(stdout);
 
     // Listen and get handles to client connections
@@ -156,7 +154,6 @@ void connectClients(int32_t* handles) {
 
     // Setup client connection details
     struct sockaddr_in* clientSocketInfo = calloc(totalClients, sizeof(struct sockaddr_in));
-    clientConnHandles = calloc(totalClients, sizeof(int32_t));
 
     // Create connections to the clients
     for (currentClients = 0; currentClients < totalClients; currentClients++) {
@@ -174,7 +171,6 @@ void connectClients(int32_t* handles) {
         }
 
         sendAll(currHandle, SERVER_HANDSHAKE, sizeof(SERVER_HANDSHAKE) + 1);
-        clientConnHandles[currentClients] = currHandle;
 
         // Store connection handle and details
         clientSocketInfo[currentClients] = currClientSocketInfo;
@@ -196,6 +192,27 @@ void connectClients(int32_t* handles) {
     }
 
     printf("All clients connected.\n");
+}
+
+// Send IP addresses of the snoop servers to the clients
+void configClientIP() {
+    char ip[16] = "";
+    for (int32_t i = 0; i < totalClients; i++) {
+        printf("Snoop Server IP (%d): ", i);
+        scanf("%s", ip);
+        sendAll(clientConnHandles[i], ip, strlen(ip) + 1);
+    }
+}
+
+// Request client number to send a snoop request with parameters
+void sendSnoopReq(int32_t client, uint32_t requestNum, uint32_t requestIdent) {
+    if (client < 0 || client >= totalClients) {
+        printf("Error: Invalid client number for snoop request (%d)\n", client);
+        exit(EXIT_FAILURE);
+    }
+    SnoopRequest request = { .requestNum = requestNum, .requestIdent = requestIdent };
+    sendAll(clientConnHandles[client], (char *) &request, sizeof(SnoopRequest));
+    printf("Sent snoop request to client %d (requestNum: %u, requestIdent: %u", client, requestNum, requestIdent);
 }
 
 // Pre exit

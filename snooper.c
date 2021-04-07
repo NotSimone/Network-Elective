@@ -16,41 +16,81 @@
 
 #include "network.h"
 
-#define CLIENT_HANDSHAKE "snooping-client-req"
-#define SERVER_HANDSHAKE "snooping-server-ack"
-
 void connectServer();
+struct sockaddr_in getIP();
 void cleanup();
 
 uint64_t serverIP;
-uint32_t serverPort = 7209;
 
 int32_t serverHandle = -1;
+int32_t snoopHandle = -1;
 
 char recvBuf[1024] = "";
 char sendBuf[1024] = "";
 
 int main(int argc, char * argv[]) {
     serverIP = argc > 1 ? inet_addr(argv[1]) : inet_addr("127.0.0.1");
+
     connectServer();
+    struct sockaddr_in snoopAddr = getIP();
+
+    fd_set fdSet;
+    FD_ZERO(&fdSet);
+    int32_t maxFd = snoopHandle > serverHandle ? snoopHandle : serverHandle;
+    FD_SET(snoopHandle, &fdSet);
+    FD_SET(serverHandle, &fdSet);
 
     while (1) {
-        // Get keyboard input
-        sendBuf[0] = '\0';
-        scanf("%s", sendBuf);
-
-        // Send and receive
-        sendAll(serverHandle, sendBuf, strlen(sendBuf) + 1);
-        printf("Send: %s\n", sendBuf);
-        sendBuf[0] = '\0';
-        int32_t rec = recv(serverHandle, sendBuf, sizeof(sendBuf), 0);
-        if (rec > 0) {
-            printf("Echo: %s\n", sendBuf);
-        } else if (rec == 0) {
-            printf("Error: Server closed connection\n");
+        fd_set fdSetCopy = fdSet;
+        // Block until we get a request
+        uint32_t num = select(maxFd + 1, &fdSetCopy, NULL, NULL, NULL);
+        if (num < 0) {
+            printf("Error: Select error\n");
             exit(EXIT_FAILURE);
-        } else {
-            printf("Error: recv error\n");
+        }
+
+        // Check the control server
+        if (FD_ISSET(serverHandle, &fdSetCopy)) {
+            int32_t rec = recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
+            if (rec > 0) {
+                // Forward the snoopRequest onto the snoop server
+                SnoopRequest* request = (SnoopRequest*) recvBuf;
+                if (sendAllTo(snoopHandle, recvBuf, sizeof(SnoopRequest), &snoopAddr) == 0) {
+                    printf("Forwarded snoop request (requestNum: %u, requestIdent: %u)\n", request->requestNum, request->requestIdent);
+                } else {
+                    printf("Error: Could not forward snoop request (requestNum: %u, requestIdent: %u)\n", request->requestNum, request->requestIdent);
+                    exit(EXIT_FAILURE);
+                }
+            } else if (rec == 0 || rec == 1) {
+                printf("Error: Server closed connection\n");
+                exit(EXIT_FAILURE);
+            } else {
+                printf("Error: Server recv error\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        // Check the snoop server
+        if (FD_ISSET(snoopHandle, &fdSetCopy)) {
+            struct sockaddr snoopServer;
+            socklen_t len;
+            int32_t rec = recvfrom(snoopHandle, recvBuf, sizeof(recvBuf), 0, &snoopServer, &len); 
+            if (rec > 0) {
+                // Repackage and forward to control server
+                SnoopResponse* response = (SnoopResponse*) recvBuf;
+                SnoopedPacket packet = { .requestIdent = response->requestIdent, .packetIdent = response->packetIdent};
+                // Message length is recv size - two identifiers
+                packet.messageLength = rec - 8;
+                memcpy(packet.message, response->message, packet.messageLength);
+                // New packet is larger because of the messageLength field
+                sendAll(serverHandle, (char*) &packet, rec + 4);
+                printf("Forwarded snooped packet to server (%d bytes)", packet.messageLength);
+                fflush(stdout);
+            } else {
+                printf("Error: Snoop recv error\n");
+                exit(EXIT_FAILURE);
+            }
+
             exit(EXIT_FAILURE);
         }
     }
@@ -67,16 +107,18 @@ void connectServer() {
         }
     #endif
 
-
+    // TCP control server socket
     serverHandle = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    // UDP snoop server socket
+    snoopHandle = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
     // Not being able to get socket numbers is handled differently in windows
     #ifdef _WIN32
-        if (serverHandle == INVALID_SOCKET) { 
+        if (serverHandle == INVALID_SOCKET || snoopHandle == INVALID_SOCKET) { 
             printf("Error: Unable to get socket\n");
             exit(EXIT_FAILURE);
         }
     #else
-        if (serverHandle < 0) { 
+        if (serverHandle < 0 || snoopHandle < 0) { 
             printf("Error: Unable to get socket\n");
             exit(EXIT_FAILURE);
         }
@@ -89,10 +131,10 @@ void connectServer() {
     // Configure and bind the socket
     struct sockaddr_in serverSocketInfo = {0};
     serverSocketInfo.sin_family = AF_INET;
-    serverSocketInfo.sin_port = htons(serverPort);
+    serverSocketInfo.sin_port = htons(SERVER_PORT);
     serverSocketInfo.sin_addr.s_addr = serverIP;
 
-    printf("Connecting to server %s on port %d\n", inet_ntoa(serverSocketInfo.sin_addr), serverPort);
+    printf("Connecting to server %s on port %d\n", inet_ntoa(serverSocketInfo.sin_addr), SERVER_PORT);
     fflush(stdout);
 
     // Attempt to connect to the server
@@ -113,12 +155,28 @@ void connectServer() {
     }    
 }
 
+// Get IP address of snoop server we connect to from control server
+struct sockaddr_in getIP() {
+    printf("Waiting for snoop server IP\n");
+    recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
+    struct sockaddr_in snoopAddr;
+    snoopAddr.sin_family = AF_INET;
+    snoopAddr.sin_port = htons(SNOOP_PORT);
+    snoopAddr.sin_addr.s_addr = inet_addr(recvBuf);
+    printf("Snoop server configured to %s\n", recvBuf);
+
+    return snoopAddr;
+}
+
+// Close ports and clean up before exiting
 void cleanup() {
     printf("Closing handles and exiting\n");
     #ifdef _WIN32
         closesocket(serverHandle);
+        closesocket(snoopHandle);
         WSACleanup();
     #else
         close(serverHandle);
+        close(snoopHandle);
     #endif
 }
