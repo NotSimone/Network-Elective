@@ -80,7 +80,7 @@ int main(int argc, char * argv[]) {
                     int32_t sent = send(clientHandle, recvBuf, strlen(recvBuf) + 1, 0);
                     printf("%d: %s (%d)\n", i, recvBuf, sent);
                     fflush(stdout);
-                } else if (rec == 0 || rec == SOCKET_ERROR) {
+                } else if (rec == 0 || rec == -1) {
                     // Client closed connection
                     printf("Error: Client %d closed connection\n", i);
                     exit(EXIT_FAILURE);
@@ -161,7 +161,7 @@ void connectClients(int32_t* handles) {
     // Create connections to the clients
     for (currentClients = 0; currentClients < totalClients; currentClients++) {
         struct sockaddr_in currClientSocketInfo;
-        int32_t len = sizeof(currClientSocketInfo);
+        socklen_t len = sizeof(currClientSocketInfo);
 
         // Block until we get an incoming connection
         int32_t currHandle = accept(serverSocketHandle, (struct sockaddr*) &currClientSocketInfo, &len);

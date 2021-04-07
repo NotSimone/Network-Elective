@@ -5,15 +5,27 @@
             "type": "shell",
             "label": "(gcc) Build",
             "command": "gcc",
-            "args": [
-                "-g",
-                "${workspaceFolder}/${fileBasenameNoExtension}.c",
-                "-o",
-                "${workspaceFolder}/${fileBasenameNoExtension}.exe",
-                "-Wall",
-                "-Werror",
-                "-lws2_32"
-            ],
+            "windows":{
+                "args": [
+                    "-g",
+                    "${workspaceFolder}/${fileBasenameNoExtension}.c",
+                    "-o",
+                    "${workspaceFolder}/${fileBasenameNoExtension}.exe",
+                    "-Wall",
+                    "-Werror",
+                    "-lws2_32"
+                ],
+            },
+            "linux":{
+                "args": [
+                    "-g",
+                    "${workspaceFolder}/${fileBasenameNoExtension}.c",
+                    "-o",
+                    "${workspaceFolder}/${fileBasenameNoExtension}.exe",
+                    "-Wall",
+                    "-Werror"
+                ],
+            }, 
             "problemMatcher": [],
             "group": {
                 "kind": "build",

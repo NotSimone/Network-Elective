@@ -27,7 +27,7 @@ uint32_t serverPort = 7209;
 
 int32_t serverHandle = -1;
 
-char recvBuf[1025] = "";
+char recvBuf[1024] = "";
 char sendBuf[1024] = "";
 
 int main(int argc, char * argv[]) {
