@@ -14,7 +14,7 @@
     #include <unistd.h>
 #endif
 
-#include "packet.h"
+#include "network.h"
 
 #define CLIENT_HANDSHAKE "snooping-client-req"
 #define SERVER_HANDSHAKE "snooping-server-ack"
@@ -40,8 +40,8 @@ int main(int argc, char * argv[]) {
         scanf("%s", sendBuf);
 
         // Send and receive
-        int32_t sent = send(serverHandle, sendBuf, strlen(sendBuf) + 1, 0);
-        printf("Send: %s (%d)\n", sendBuf, sent);
+        sendAll(serverHandle, sendBuf, strlen(sendBuf) + 1);
+        printf("Send: %s\n", sendBuf);
         sendBuf[0] = '\0';
         int32_t rec = recv(serverHandle, sendBuf, sizeof(sendBuf), 0);
         if (rec > 0) {
@@ -102,7 +102,7 @@ void connectServer() {
     }
 
     // Handshake with server
-    send(serverHandle, CLIENT_HANDSHAKE, strlen(CLIENT_HANDSHAKE) + 1, 0);
+    sendAll(serverHandle, CLIENT_HANDSHAKE, strlen(CLIENT_HANDSHAKE) + 1);
     recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
     if (strcmp(recvBuf, SERVER_HANDSHAKE) == 0) {
         printf("Connected to server\n");

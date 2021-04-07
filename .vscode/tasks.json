@@ -9,6 +9,7 @@
                 "args": [
                     "-g",
                     "${workspaceFolder}/${fileBasenameNoExtension}.c",
+                    "${workspaceFolder}/network.c",
                     "-o",
                     "${workspaceFolder}/${fileBasenameNoExtension}.exe",
                     "-Wall",
@@ -20,6 +21,7 @@
                 "args": [
                     "-g",
                     "${workspaceFolder}/${fileBasenameNoExtension}.c",
+                    "${workspaceFolder}/network.c",
                     "-o",
                     "${workspaceFolder}/${fileBasenameNoExtension}.exe",
                     "-Wall",

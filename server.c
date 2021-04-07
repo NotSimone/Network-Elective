@@ -14,7 +14,7 @@
     #include <unistd.h>
 #endif
 
-#include "packet.h"
+#include "network.h"
 
 #define CLIENT_HANDSHAKE "snooping-client-req"
 #define SERVER_HANDSHAKE "snooping-server-ack"
@@ -39,16 +39,16 @@ int main(int argc, char * argv[]) {
 
     if (argc > 1) totalClients = atoi(argv[1]);
 
-    int32_t* handles = calloc(totalClients, sizeof(int32_t));
-    connectClients(handles);
+    int32_t* fd = calloc(totalClients, sizeof(int32_t));
+    connectClients(fd);
 
     // Initialise select
-    fd_set serverFDSet;
-    FD_ZERO(&serverFDSet);
-    int32_t maxHandle = 0;
-    for(int32_t i = 0; i < totalClients; i++) {
-        if (handles[i] > maxHandle) maxHandle = handles[i];
-        FD_SET(handles[i], &serverFDSet);
+    fd_set serverFdSet;
+    FD_ZERO(&serverFdSet);
+    int32_t maxFd = 0;
+    for (int32_t i = 0; i < totalClients; i++) {
+        if (fd[i] > maxFd) maxFd = fd[i];
+        FD_SET(fd[i], &serverFdSet);
     }
     
 
@@ -60,9 +60,9 @@ int main(int argc, char * argv[]) {
 
     // Main loop
     while (1) {
-        fd_set copyFDSet = serverFDSet;
+        fd_set copyFdSet = serverFdSet;
         // Block until a client sends to us
-        uint32_t num = select(maxHandle + 1, &copyFDSet, NULL, NULL, NULL);
+        uint32_t num = select(maxFd + 1, &copyFdSet, NULL, NULL, NULL);
         if (num < 0) {
             printf("Error: Select timeout\n");
             exit(EXIT_FAILURE);
@@ -71,14 +71,14 @@ int main(int argc, char * argv[]) {
         // Check each client in turn until we find the ones that sent
         for (uint32_t i = 0; i < totalClients; i++) {
             int32_t clientHandle = clientConnHandles[i];
-            if (FD_ISSET(clientHandle, &serverFDSet)) {
+            if (FD_ISSET(clientHandle, &copyFdSet)) {
                 // Receive from the client
                 // TODO: Actually do something here
                 // right now, all it does is echo back messages
                 int32_t rec = recv(clientHandle, (char *)recvBuf, sizeof(recvBuf), 0);
                 if (rec > 0) {
-                    int32_t sent = send(clientHandle, recvBuf, strlen(recvBuf) + 1, 0);
-                    printf("%d: %s (%d)\n", i, recvBuf, sent);
+                    sendAll(clientHandle, recvBuf, strlen(recvBuf) + 1);
+                    printf("%d: %s\n", i, recvBuf);
                     fflush(stdout);
                 } else if (rec == 0 || rec == -1) {
                     // Client closed connection
@@ -173,7 +173,7 @@ void connectClients(int32_t* handles) {
             continue;
         }
 
-        send(currHandle, SERVER_HANDSHAKE, sizeof(SERVER_HANDSHAKE) + 1, 0);
+        sendAll(currHandle, SERVER_HANDSHAKE, sizeof(SERVER_HANDSHAKE) + 1);
         clientConnHandles[currentClients] = currHandle;
 
         // Store connection handle and details

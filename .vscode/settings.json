@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "inet.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "ioall.h": "c"
     }
 }
