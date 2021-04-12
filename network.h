@@ -12,7 +12,7 @@
 #endif
 
 #define SERVER_PORT 7209
-#define SNOOP_PORT 2000
+#define SNOOP_PORT 8154
 
 #define CLIENT_HANDSHAKE "snooping-client-req"
 #define SERVER_HANDSHAKE "snooping-server-ack"

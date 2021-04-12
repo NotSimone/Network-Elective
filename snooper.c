@@ -144,8 +144,9 @@ void connectServer() {
     }
 
     // Handshake with server
-    sendAll(serverHandle, CLIENT_HANDSHAKE, strlen(CLIENT_HANDSHAKE) + 1);
-    recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
+    sendAll(serverHandle, CLIENT_HANDSHAKE, strlen(CLIENT_HANDSHAKE));
+    uint32_t rec = recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
+    recvBuf[rec] = '\0';
     if (strcmp(recvBuf, SERVER_HANDSHAKE) == 0) {
         printf("Connected to server\n");
         fflush(stdout);
@@ -158,12 +159,15 @@ void connectServer() {
 // Get IP address of snoop server we connect to from control server
 struct sockaddr_in getIP() {
     printf("Waiting for snoop server IP\n");
-    recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
+    uint32_t rec = recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
+    char ip[16];
+    memcpy(ip, recvBuf, rec);
+    ip[rec] = '\0';
     struct sockaddr_in snoopAddr;
     snoopAddr.sin_family = AF_INET;
     snoopAddr.sin_port = htons(SNOOP_PORT);
-    snoopAddr.sin_addr.s_addr = inet_addr(recvBuf);
-    printf("Snoop server configured to %s\n", recvBuf);
+    snoopAddr.sin_addr.s_addr = inet_addr(ip);
+    printf("Snoop server configured to %s\n", ip);
 
     return snoopAddr;
 }
