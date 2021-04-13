@@ -17,7 +17,7 @@
 #include "network.h"
 
 void connectServer();
-struct sockaddr_in getIP();
+struct sockaddr_in getConfig();
 void cleanup();
 
 uint64_t serverIP;
@@ -32,7 +32,7 @@ int main(int argc, char * argv[]) {
     serverIP = argc > 1 ? inet_addr(argv[1]) : inet_addr("127.0.0.1");
 
     connectServer();
-    struct sockaddr_in snoopAddr = getIP();
+    struct sockaddr_in snoopAddr = getConfig();
 
     fd_set fdSet;
     FD_ZERO(&fdSet);
@@ -156,18 +156,22 @@ void connectServer() {
     }    
 }
 
-// Get IP address of snoop server we connect to from control server
-struct sockaddr_in getIP() {
+// Get config of snoop server we connect to from control server
+struct sockaddr_in getConfig() {
     printf("Waiting for snoop server IP\n");
     uint32_t rec = recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
+
+    Config* config = (Config *) recvBuf;
     char ip[16];
-    memcpy(ip, recvBuf, rec);
-    ip[rec] = '\0';
+    memcpy(ip, config->ip, rec-4);
+    ip[rec-4] = '\0';
+    uint32_t port = config->port;
+
     struct sockaddr_in snoopAddr;
     snoopAddr.sin_family = AF_INET;
-    snoopAddr.sin_port = htons(SNOOP_PORT);
+    snoopAddr.sin_port = htons(port);
     snoopAddr.sin_addr.s_addr = inet_addr(ip);
-    printf("Snoop server configured to %s\n", ip);
+    printf("Snoop server configured to %s:%u\n", ip, port);
 
     return snoopAddr;
 }

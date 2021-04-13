@@ -1,4 +1,4 @@
-# Control Server for Snooping Clients
+# Server class
 
 import socket
 from typing import List
@@ -8,6 +8,14 @@ SERVER_PORT = 7209
 CLIENT_HANDSHAKE = "snooping-client-req"
 SERVER_HANDSHAKE = "snooping-server-ack"
 
+# Packet returned by client
+class SnoopedPacket:
+    def __init__(self, request_ident: int, packet_ident: int, message: str) -> None:
+        self.request_ident = request_ident
+        self.packet_ident = packet_ident
+        self.message = message
+
+# Control server
 class Server:
     server_socket: socket.socket
     connections: List[socket.socket] = list()
@@ -16,8 +24,12 @@ class Server:
     current_clients: int = 0
     total_clients: int
 
-    def __init__(self) -> None:
-        pass
+    def __enter__(self) -> "Server":
+        self.init()
+        return self
+
+    def __exit__(self) -> None:
+        self.cleanup()
 
     # Initialise the socket and begin listening
     def init(self) -> None:
@@ -45,15 +57,30 @@ class Server:
         print(f"All clients connected")
 
     # Configures snoopers to ip
-    def config_ip(self) -> None:
-        ip = input("Enter server ip: ")
+    def config_clients(self, ip:str=None, port: int=None) -> None:
+        if ip == None:
+            ip = input("Enter server ip: ")
+        if port == None:
+            port = int(input("Enter server port: "))
         for conn in self.connections:
-            conn.send(str.encode(ip))
-
+            conn.send(port.to_bytes(4, "little") + str.encode(ip))
+        print(f"All clients configured to {ip}:{port}")
+            
     # Send a snoop request to a client to forward onto the snoop server
     def send_snoop_req(self, client: int, request_num: int, request_ident: int) -> None:
         conn = self.connections[client]
         conn.send(request_num.to_bytes(4, "little") + request_ident.to_bytes(4, "little"))
+
+    # Gets a snooped packet from an active connection
+    def get_snooped_packet(self, conn: socket.socket) -> SnoopedPacket:
+        data = conn.recv(1024)
+        # Check if the connection is closed and return none
+        if len(data) == 0:
+            raise ConnectionAbortedError
+        request_ident = int.from_bytes(data[:4], "little")
+        packet_ident = int.from_bytes(data[4:8], "little")
+        message = data[12:].decode()
+        return SnoopedPacket(request_ident, packet_ident, message)
 
     # Cleanup when done
     def cleanup(self) -> None:
@@ -61,14 +88,3 @@ class Server:
         self.server_socket.close()
         for conn in self.connections:
             conn.close()
-
-
-
-server = Server()
-try:
-    server.init()
-    server.connect_clients(1)
-    server.config_ip()
-    server.send_snoop_req(0, 12345, 6789)
-finally:
-    server.cleanup()

@@ -12,7 +12,6 @@
 #endif
 
 #define SERVER_PORT 7209
-#define SNOOP_PORT 8154
 
 #define CLIENT_HANDSHAKE "snooping-client-req"
 #define SERVER_HANDSHAKE "snooping-server-ack"
@@ -38,5 +37,10 @@ typedef struct _SnoopRequest {
     uint32_t requestNum;
     uint32_t requestIdent;
 } SnoopRequest;
+
+typedef struct _Config {
+    uint32_t port;
+    char ip[16];
+} Config;
 
 #endif
