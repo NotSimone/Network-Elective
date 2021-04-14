@@ -28,7 +28,7 @@ class Server:
         self.init()
         return self
 
-    def __exit__(self) -> None:
+    def __exit__(self, exception_type, exception_value, exception_traceback) -> None:
         self.cleanup()
 
     # Initialise the socket and begin listening
@@ -79,7 +79,8 @@ class Server:
             raise ConnectionAbortedError
         request_ident = int.from_bytes(data[:4], "little")
         packet_ident = int.from_bytes(data[4:8], "little")
-        message = data[12:].decode()
+        message_len = int.from_bytes(data[8:12], "little")
+        message = data[12:12+message_len].decode()
         return SnoopedPacket(request_ident, packet_ident, message)
 
     # Cleanup when done

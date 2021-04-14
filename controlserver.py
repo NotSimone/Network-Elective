@@ -19,16 +19,19 @@ with Server() as server:
     server.connect_clients(client_count)
     server.config_clients(ip=SNOOP_SERVER_IP, port=SNOOP_SERVER_PORT)
 
-    server.send_snoop_req(0, 1, 6789)
+    ident = 30
 
     while True:
+        server.send_snoop_req(0, 1, ident)
+        ident += 1
+
         # Select on one of the clients returning data
         readable, _, exceptions = select(server.connections, [], server.connections)
         conn: socket.socket
 
         for conn in exceptions:
             print(f"Something has gone wrong with client {server.connections.index(conn)}")
-            exit
+            exit()
 
         for conn in readable:
             try:
@@ -37,4 +40,4 @@ with Server() as server:
                 snooped_packets.put(packet)
             except ConnectionAbortedError:
                 print(f"Client {server.connections.index(conn)} closed connection")
-                exit          
+                exit()

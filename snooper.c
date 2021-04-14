@@ -54,11 +54,15 @@ int main(int argc, char * argv[]) {
             int32_t rec = recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
             if (rec > 0) {
                 // Forward the snoopRequest onto the snoop server
-                SnoopRequest* request = (SnoopRequest*) recvBuf;
-                if (sendAllTo(snoopHandle, recvBuf, sizeof(SnoopRequest), &snoopAddr) == 0) {
-                    printf("Forwarded snoop request (requestNum: %u, requestIdent: %u)\n", request->requestNum, request->requestIdent);
+                uint32_t requestNum = ((SnoopRequest*) recvBuf)->requestNum;
+                uint32_t requestIdent = ((SnoopRequest*) recvBuf)->requestIdent;
+                SnoopRequest request;
+                request.requestNum = htonl(requestNum);
+                request.requestIdent = htonl(requestIdent);
+                if (sendAllTo(snoopHandle, (char*)&request, sizeof(SnoopRequest), &snoopAddr) == 0) {
+                    printf("Sent snoop request (requestNum: %u, requestIdent: %u)\n", requestNum, requestIdent);
                 } else {
-                    printf("Error: Could not forward snoop request (requestNum: %u, requestIdent: %u)\n", request->requestNum, request->requestIdent);
+                    printf("Error: Could not forward snoop request (requestNum: %u, requestIdent: %u)\n", requestNum, requestIdent);
                     exit(EXIT_FAILURE);
                 }
             } else if (rec == 0 || rec == 1) {
@@ -78,20 +82,18 @@ int main(int argc, char * argv[]) {
             if (rec > 0) {
                 // Repackage and forward to control server
                 SnoopResponse* response = (SnoopResponse*) recvBuf;
-                SnoopedPacket packet = { .requestIdent = response->requestIdent, .packetIdent = response->packetIdent};
+                SnoopedPacket packet = { .requestIdent = htonl(response->requestIdent), .packetIdent = htonl(response->packetIdent)};
                 // Message length is recv size - two identifiers
                 packet.messageLength = rec - 8;
                 memcpy(packet.message, response->message, packet.messageLength);
                 // New packet is larger because of the messageLength field
                 sendAll(serverHandle, (char*) &packet, rec + 4);
-                printf("Forwarded snooped packet to server (%d bytes)", packet.messageLength);
+                printf("Forwarded snooped packet to server (%d bytes)\n", packet.messageLength);
                 fflush(stdout);
             } else {
                 printf("Error: Snoop recv error\n");
                 exit(EXIT_FAILURE);
             }
-
-            exit(EXIT_FAILURE);
         }
     }
 }
