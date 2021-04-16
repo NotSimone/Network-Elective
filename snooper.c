@@ -25,8 +25,8 @@ uint64_t serverIP;
 int32_t serverHandle = -1;
 int32_t snoopHandle = -1;
 
-char recvBuf[1024] = "";
-char sendBuf[1024] = "";
+char recvBuf[1024];
+char sendBuf[1024];
 
 int main(int argc, char * argv[]) {
     serverIP = argc > 1 ? inet_addr(argv[1]) : inet_addr("127.0.0.1");
@@ -148,14 +148,17 @@ void connectServer() {
     // Handshake with server
     sendAll(serverHandle, CLIENT_HANDSHAKE, strlen(CLIENT_HANDSHAKE));
     uint32_t rec = recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
-    recvBuf[rec] = '\0';
+    printf("%u\n", rec);
     if (strcmp(recvBuf, SERVER_HANDSHAKE) == 0) {
         printf("Connected to server\n");
         fflush(stdout);
     } else {
         printf("Error: Invalid server handshake\n");
         exit(EXIT_FAILURE);
-    }    
+    }
+
+    // Send ack
+    sendAll(serverHandle, ACK, strlen(ACK));
 }
 
 // Get config of snoop server we connect to from control server

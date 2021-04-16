@@ -15,6 +15,7 @@
 
 #define CLIENT_HANDSHAKE "snooping-client-req"
 #define SERVER_HANDSHAKE "snooping-server-ack"
+#define ACK "ack"
 
 int sendAll(int s, char *buf, int len);
 int sendAllTo(int s, char *buf, int len, struct sockaddr_in* sockaddr);

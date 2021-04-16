@@ -7,6 +7,7 @@ SERVER_PORT = 7209
 
 CLIENT_HANDSHAKE = "snooping-client-req"
 SERVER_HANDSHAKE = "snooping-server-ack"
+ACK = "ack"
 
 # Packet returned by client
 class SnoopedPacket:
@@ -50,6 +51,10 @@ class Server:
                 print(f"Bad handshake")
             else:
                 conn.send(str.encode(SERVER_HANDSHAKE))
+                data = conn.recv(1024)
+                if data.decode() != ACK:
+                    print("Bad ACK")
+                    continue
                 self.connections.append(conn)
                 self.addresses.append(addr)
                 self.current_clients += 1
