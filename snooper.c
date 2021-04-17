@@ -58,7 +58,7 @@ int main(int argc, char * argv[]) {
                 memcpy(dataBuf, recvBuf, rec);
                 while (rec_bytes < 8) {
                     rec += recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
-                    memcpy(dataBuf[rec_bytes], recvBuf, rec);
+                    memcpy(&dataBuf[rec_bytes], recvBuf, rec);
                     rec_bytes += rec;
                 }
 
