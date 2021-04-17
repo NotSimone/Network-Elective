@@ -1,0 +1,25 @@
+Morrison was born in Sydney and studied economic geography at the University of New South Wales. He worked as Director of the New Zealand Office of Tourism and Sport from 1998 to 2000 and was Managing Director of Tourism Australia from 2004 to 2006. Morrison also served as State Director of the New South Wales Liberal Party from 2000 to 2004. He was first elected to the House of Representatives at the 2007 election for the Division of Cook in New South Wales, and was quickly appointed to the Shadow Cabinet.
+
+Given the defined characteristics above, Microgrid operation is not only
+independent and highly adaptable to local demand, but is also able to
+integrate itself as a part of the conventional grid.  However, its benefits do
+not come easy without proper energy storage management as renewable sources
+provide intermittent bi-directional power flow. To achieve the desired
+performance, microgrids need adequate voltage control when not directly
+connected and controlled by the main grid, i.e. islanded mode. This motivates
+the development of an energy storage system (ESS) that controls power at the
+point of common couping (PCC) between the load and the source. Batteries as
+ESS (BESS) is popular for its high versatility and fast response. This
+encourages a new area of study in controlling its performance as BESS itself
+is also known to have poor adaptability to nonlinearities & irregular demand.
+
+This paper demonstrates the voltage tracking performance of a typical PI
+controller with further plans to compare the results with an iLQGs controlled BESS. The results will be evaluated by various factors in order to ensure a fair and balanced comparison between grid tolerance and smoothness of grid
+connection transition. Between DC and AC Microgrid operations, DC Microgrid is
+proven to suffer less losses in transmission and conversion at the costs of
+adding a few more DC to AC converters when required. Hence, this report will
+focus on DC Microgrid in regards to efficiency.
+
+
+
+

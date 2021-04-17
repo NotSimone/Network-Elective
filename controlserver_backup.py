@@ -9,8 +9,7 @@ import time
 from server import Server, SnoopedPacket
 
 SNOOP_SERVER_IP = "149.171.36.192"
-SNOOP_SERVER_PORT = 8154
-HTTP_SERVER_PORT = 8080
+SNOOP_SERVER_PORT = 8800
 
 snooped_packets: "Queue[SnoopedPacket]" = Queue()
 pkts = {}
@@ -20,7 +19,7 @@ with Server() as server:
     client_count = 1 if len(sys.argv) < 2 else int(sys.argv[1])
     server.connect_clients(client_count)
     server.config_clients(ip=SNOOP_SERVER_IP, port=SNOOP_SERVER_PORT)
-    
+
     ident = 30
     start = time.perf_counter()
     
@@ -28,47 +27,36 @@ with Server() as server:
         
         server.send_snoop_req(0, 1, ident)
         ident += 1
-        time.sleep(0.05)
+        time.sleep(0.04)
 
         if(time.perf_counter()-start > 5): # 5 seconds have elapsed       
             #print(pkts)
-            ttl_no_unique = len(pkts)
+            res = set(pkts.values()) # the unique set of messages
+            ttl_no_unique = len(res)
+            #print(res)
+            pkt_iden = dict((v,k) for k,v in pkts.items())
             unique_pkts = {}
             eom = -1
-            for key, value in pkts.items():
-                unique_pkts[value%ttl_no_unique] = key
-                if '\x04' in key:
-                    eom = value%ttl_no_unique
-            
-            print(sorted(unique_pkts))
-            print("current pkts no: "+str(ttl_no_unique))
-            # res = set(pkts.values()) # the unique set of messages
-            
-            # #print(res)
-            # pkt_iden = dict((v,k) for k,v in pkts.items())
-            
-            
-            # idenn = -1
+            idenn = -1
             msg = ''
 
-            # print(len(res))
-            # for x in res:
-            #     idenn = pkt_iden[x]
-            #     if '\x04' in x: 
-            #         eom = idenn%len(res)   
-            #     unique_pkts[idenn%len(res)] = x
+            print(len(res))
+            for x in res:
+                idenn = pkt_iden[x]
+                if '\x04' in x: 
+                    eom = idenn%len(res)   
+                unique_pkts[idenn%len(res)] = x
             
             l = list(unique_pkts.keys())
             #print(sorted(l)) #id of messages
             #print(list(range(min(l), max(l)+1)))
 
-            if sorted(l) == list(range(0, max(l)+1)): 
+            if sorted(l) == list(range(min(l), max(l)+1)): 
                 #checking if all messages have been received
                 print('snoop completed in (sec): '+str(time.perf_counter()-start))
-                print('total no of packets: '+str(ttl_no_unique))
-                print(sorted(unique_pkts))
+                print('total no of packets: '+str(len(res)))
                 i = eom+1
-                while i < len(l):
+                while i < ttl_no_unique:
                     msg += unique_pkts[i]
                     i+=1
 
@@ -78,23 +66,8 @@ with Server() as server:
                     i+=1
 
                 print(msg)
-
-                try: 
-                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     
-                    s.connect(('127.0.0.1',8080))
-                    
-                    message = "POST /session HTTP/1.1\r\n"
-                    Host = "Host: 127.0.0.1:8080\r\n"
-                    contentLength = "Content-Length: " + str(len(msg)) + "\r\n\r\n"
-                    contentType = "Content-Type: text/plain\r\n"
-            
-                    data = message + Host + contentLength + msg
-                    s.sendall(str.encode(data))
-                    print(s.recv(4096))
-                except:
-                    print('cant send! Is the server running?')
             else:
-                print('missing parts of message, current packets no.: '+str(ttl_no_unique))
+                print('missing parts of message, current packets no.: '+str(len(res)))
             
 
         # Select on one of the clients returning data
@@ -110,8 +83,8 @@ with Server() as server:
                 packet: SnoopedPacket = server.get_snooped_packet(conn)
                 print(f"Got {packet.request_ident};{packet.packet_ident};{packet.message}")
                 snooped_packets.put(packet)
-                #pkts[packet.packet_ident] = packet.message
-                pkts[packet.message] = packet.packet_ident
+                pkts[packet.packet_ident] = packet.message
+                #pkts[packet.message] = packet.packet_ident
             except ConnectionAbortedError:
                 print(f"Client {server.connections.index(conn)} closed connection")
                 exit()
