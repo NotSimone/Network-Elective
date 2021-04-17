@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <errno.h>
 
 #ifdef _WIN32
 	#include <WinSock2.h>
@@ -45,7 +46,7 @@ int main(int argc, char * argv[]) {
         // Block until we get a request
         uint32_t num = select(maxFd + 1, &fdSetCopy, NULL, NULL, NULL);
         if (num < 0) {
-            printf("Error: Select error\n");
+            printf("Error: Select error [%s]\n", strerror(errno));
             exit(EXIT_FAILURE);
         }
 
@@ -73,7 +74,7 @@ int main(int argc, char * argv[]) {
                 if (sendAllTo(snoopHandle, (char*)&request, sizeof(SnoopRequest), &snoopAddr) == 0) {
                     printf("Sent snoop request (requestNum: %u, requestIdent: %u)\n", requestNum, requestIdent);
                 } else {
-                    printf("Error: Could not forward snoop request (requestNum: %u, requestIdent: %u)\n", requestNum, requestIdent);
+                    printf("Error: Could not forward snoop request (requestNum: %u, requestIdent: %u) [%s]\n", requestNum, requestIdent, strerror(errno));
                     exit(EXIT_FAILURE);
                 }
             } else if (rec == 0 || rec == 1) {
@@ -87,13 +88,11 @@ int main(int argc, char * argv[]) {
 
         // Check the snoop server
         if (FD_ISSET(snoopHandle, &fdSetCopy)) {
-            struct sockaddr snoopServer;
-            socklen_t len;
-            int32_t rec = recvfrom(snoopHandle, recvBuf, sizeof(recvBuf), 0, &snoopServer, &len); 
+            int32_t rec = recvfrom(snoopHandle, recvBuf, sizeof(recvBuf), 0, NULL, NULL); 
             if (rec > 0) {
                 // Repackage and forward to control server
                 SnoopResponse* response = (SnoopResponse*) recvBuf;
-                SnoopedPacket packet = { .requestIdent = htonl(response->requestIdent), .packetIdent = htonl(response->packetIdent)};
+                SnoopedPacket packet = { .requestIdent = htonl(response->requestIdent), .packetIdent = htonl(response->packetIdent) };
                 // Message length is recv size - two identifiers
                 packet.messageLength = rec - 8;
                 memcpy(packet.message, response->message, packet.messageLength);
@@ -103,7 +102,7 @@ int main(int argc, char * argv[]) {
                 printf("Forwarded snooped packet to server (%d bytes)\n", packet.messageLength);
                 fflush(stdout);
             } else {
-                printf("Error: Snoop recv error\n");
+                printf("Error: Snoop recv error [%s]\n", strerror(errno));
                 exit(EXIT_FAILURE);
             }
         }
@@ -128,12 +127,12 @@ void connectServer() {
     // Not being able to get socket numbers is handled differently in windows
     #ifdef _WIN32
         if (serverHandle == INVALID_SOCKET || snoopHandle == INVALID_SOCKET) { 
-            printf("Error: Unable to get socket\n");
+            printf("Error: Unable to get socket [%s]\n", strerror(errno));
             exit(EXIT_FAILURE);
         }
     #else
         if (serverHandle < 0 || snoopHandle < 0) { 
-            printf("Error: Unable to get socket\n");
+            printf("Error: Unable to get socket [%s]\n", strerror(errno));
             exit(EXIT_FAILURE);
         }
     #endif
@@ -153,7 +152,7 @@ void connectServer() {
 
     // Attempt to connect to the server
     if (connect(serverHandle, (struct sockaddr*) &serverSocketInfo, sizeof(serverSocketInfo)) != 0) {
-        printf("Error: Unable to connect to server\n");
+        printf("Error: Unable to connect to server [%s]\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -167,7 +166,7 @@ void connectServer() {
         printf("Connected to server\n");
         fflush(stdout);
     } else {
-        printf("Error: Invalid server handshake\n");
+        printf("Error: Invalid server handshake [%s]\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -189,7 +188,13 @@ struct sockaddr_in getConfig() {
     snoopAddr.sin_family = AF_INET;
     snoopAddr.sin_port = htons(port);
     snoopAddr.sin_addr.s_addr = inet_addr(ip);
-    printf("Snoop server configured to %s:%u\n", ip, port);
+
+    if (connect(snoopHandle, (struct sockaddr*)&snoopAddr, sizeof(snoopAddr)) != 0) {
+        printf("Error: Could not connect to snoop server [%s]\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Snoop server connected to %s:%u\n", ip, port);
 
     return snoopAddr;
 }
