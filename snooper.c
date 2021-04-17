@@ -26,7 +26,7 @@ int32_t serverHandle = -1;
 int32_t snoopHandle = -1;
 
 char recvBuf[1024];
-char sendBuf[1024];
+char dataBuf[1024];
 
 int main(int argc, char * argv[]) {
     serverIP = argc > 1 ? inet_addr(argv[1]) : inet_addr("127.0.0.1");
@@ -53,12 +53,23 @@ int main(int argc, char * argv[]) {
         if (FD_ISSET(serverHandle, &fdSetCopy)) {
             int32_t rec = recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
             if (rec > 0) {
-                // Forward the snoopRequest onto the snoop server
-                uint32_t requestNum = ((SnoopRequest*) recvBuf)->requestNum;
-                uint32_t requestIdent = ((SnoopRequest*) recvBuf)->requestIdent;
+                // Continue until we get a whole snoop request
+                int32_t rec_bytes = rec;
+                memcpy(dataBuf, recvBuf, rec);
+                while (rec_bytes < 8) {
+                    rec += recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
+                    memcpy(dataBuf[rec_bytes], recvBuf, rec);
+                    rec_bytes += rec;
+                }
+
+                // Create the snoop request
+                uint32_t requestNum = ((SnoopRequest*) dataBuf)->requestNum;
+                uint32_t requestIdent = ((SnoopRequest*) dataBuf)->requestIdent;
                 SnoopRequest request;
                 request.requestNum = htonl(requestNum);
                 request.requestIdent = htonl(requestIdent);
+
+                // Send the snoop request
                 if (sendAllTo(snoopHandle, (char*)&request, sizeof(SnoopRequest), &snoopAddr) == 0) {
                     printf("Sent snoop request (requestNum: %u, requestIdent: %u)\n", requestNum, requestIdent);
                 } else {
@@ -86,6 +97,7 @@ int main(int argc, char * argv[]) {
                 // Message length is recv size - two identifiers
                 packet.messageLength = rec - 8;
                 memcpy(packet.message, response->message, packet.messageLength);
+                
                 // New packet is larger because of the messageLength field
                 sendAll(serverHandle, (char*) &packet, rec + 4);
                 printf("Forwarded snooped packet to server (%d bytes)\n", packet.messageLength);
@@ -146,10 +158,12 @@ void connectServer() {
     }
 
     // Handshake with server
-    sendAll(serverHandle, CLIENT_HANDSHAKE, strlen(CLIENT_HANDSHAKE));
     uint32_t rec = recv(serverHandle, recvBuf, sizeof(recvBuf), 0);
-    printf("%u\n", rec);
-    if (strcmp(recvBuf, SERVER_HANDSHAKE) == 0) {
+
+    if (rec == 0) {
+        printf("Server connection aborted\n");
+        exit(EXIT_FAILURE);
+    } else if (strcmp(recvBuf, SERVER_HANDSHAKE) == 0) {
         printf("Connected to server\n");
         fflush(stdout);
     } else {
@@ -157,8 +171,7 @@ void connectServer() {
         exit(EXIT_FAILURE);
     }
 
-    // Send ack
-    sendAll(serverHandle, ACK, strlen(ACK));
+    sendAll(serverHandle, CLIENT_HANDSHAKE, strlen(CLIENT_HANDSHAKE));
 }
 
 // Get config of snoop server we connect to from control server
