@@ -27,8 +27,11 @@ with Server() as server:
     while True:
         
         server.send_snoop_req(0, 1, ident)
+        time.sleep(0.05)
+        server.send_snoop_req(1, 2, ident)
+        time.sleep(0.05)
         ident += 1
-        time.sleep(0.1)
+        
 
         if(time.perf_counter()-start > 5): # 5 seconds have elapsed       
             #print(pkts)
@@ -61,7 +64,7 @@ with Server() as server:
             l = list(unique_pkts.keys())
             #print(sorted(l)) #id of messages
             #print(list(range(min(l), max(l)+1)))
-
+            print(unique_pkts)
             if sorted(l) == list(range(0, max(l)+1)): 
                 #checking if all messages have been received
                 print('snoop completed in (sec): '+str(time.perf_counter()-start))
@@ -91,11 +94,10 @@ with Server() as server:
                 data = message + Host + contentLength + msg
                 s.sendall(str.encode(data))
                 print(s.recv(4096))
-               
             
                 print('cant send')
             else:
-                print('missing parts of message, current packets no.: '+str(ttl_no_unique))
+                print('missing parts of message, current packets no.: '+str(len(l)))
             
 
         # Select on one of the clients returning data
