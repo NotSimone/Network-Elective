@@ -5,9 +5,8 @@ from typing import List
 
 SERVER_PORT = 7209
 
-CLIENT_HANDSHAKE = "snooping-client-req"
-SERVER_HANDSHAKE = "snooping-server-ack"
-ACK = "ack"
+CLIENT_HANDSHAKE = "snooping-client-handshake"
+SERVER_HANDSHAKE = "snooping-server-handshake"
 
 # Packet returned by client
 class SnoopedPacket:
@@ -46,19 +45,18 @@ class Server:
         while self.current_clients < total_clients:
             conn, addr = self.server_socket.accept()
             print(f"Received connection from {addr}")
+
+            # Attempt handshake
+            conn.send(str.encode(SERVER_HANDSHAKE))
             data = conn.recv(1024)
             if data.decode() != CLIENT_HANDSHAKE:
                 print(f"Bad handshake")
-            else:
-                conn.send(str.encode(SERVER_HANDSHAKE))
-                data = conn.recv(1024)
-                if data.decode() != ACK:
-                    print("Bad ACK")
-                    continue
-                self.connections.append(conn)
-                self.addresses.append(addr)
-                self.current_clients += 1
-                print(f"Handshake successful - client connected")
+                continue
+
+            self.connections.append(conn)
+            self.addresses.append(addr)
+            self.current_clients += 1
+            print(f"Handshake successful - client connected")
         print(f"All clients connected")
 
     # Configures snoopers to ip
@@ -77,16 +75,35 @@ class Server:
         conn.send(request_num.to_bytes(4, "little") + request_ident.to_bytes(4, "little"))
 
     # Gets a snooped packet from an active connection
-    def get_snooped_packet(self, conn: socket.socket) -> SnoopedPacket:
+    def get_snooped_packet(self, conn: socket.socket) -> List[SnoopedPacket]:
+        snooped_packets = []
         data = conn.recv(1024)
-        # Check if the connection is closed and return none
-        if len(data) == 0:
-            raise ConnectionAbortedError
-        request_ident = int.from_bytes(data[:4], "little")
-        packet_ident = int.from_bytes(data[4:8], "little")
-        message_len = int.from_bytes(data[8:12], "little")
-        message = data[12:12+message_len].decode()
-        return SnoopedPacket(request_ident, packet_ident, message)
+
+        while True:
+            # Check if the connection is closed and return none
+            if len(data) == 0:
+                raise ConnectionAbortedError
+            # Check if we got the whole packet
+            while len(data) < 8:
+                data += conn.recv(1024)
+            
+            message_len = int.from_bytes(data[8:12], "little")
+            while (len(data) < 12 + message_len):
+                data += conn.recv(1024)
+            
+            # Fill SnoopedPacket data structure
+            request_ident = int.from_bytes(data[:4], "little")
+            packet_ident = int.from_bytes(data[4:8], "little")
+            message = data[12:12+message_len].decode()
+
+            snooped_packets.append(SnoopedPacket(request_ident, packet_ident, message))
+
+            # Check if there are more messages left
+            data = data[12+message_len:]
+            if len(data) == 0:
+                break
+
+        return snooped_packets
 
     # Cleanup when done
     def cleanup(self) -> None:
