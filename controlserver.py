@@ -7,7 +7,6 @@ from typing import List
 import time
 import random
 from server import Server, SnoopedPacket
-import requests
 
 SNOOP_SERVER_IP = "149.171.36.192"
 SNOOP_SERVER_PORT = 8154
