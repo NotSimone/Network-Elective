@@ -1,7 +1,7 @@
 // Utility functions for safer sending and receiving
 // https://beej.us/guide/bgnet/html/
 
-#include "network.h"
+#include "network_steph.h" //changed by steph
 
 // Safer TCP send function call
 int sendAll(int s, char *buf, int len) {

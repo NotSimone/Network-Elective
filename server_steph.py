@@ -3,7 +3,7 @@
 import socket
 from typing import List
 
-SERVER_PORT = 7209
+SERVER_PORT = 7500 # changed by steph
 
 CLIENT_HANDSHAKE = "snooping-client-handshake"
 SERVER_HANDSHAKE = "snooping-server-handshake"

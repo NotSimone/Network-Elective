@@ -15,7 +15,7 @@
     #include <unistd.h>
 #endif
 
-#include "network.h"
+#include "network_steph.h" //changed by steph
 
 void connectServer();
 struct sockaddr_in getConfig();
