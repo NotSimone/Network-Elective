@@ -100,6 +100,8 @@ int main(int argc, char * argv[]) {
                 // Check packetIdent to discard these
                 if (packet.packetIdent == prevPacketIdent) {
                     continue;
+                } else {
+                    prevPacketIdent = packet.packetIdent;
                 }
 
                 // Message length is recv size - two identifiers
@@ -109,7 +111,6 @@ int main(int argc, char * argv[]) {
                 // New packet is larger because of the messageLength field
                 sendAll(serverHandle, (char*) &packet, rec + 4);
                 printf("Forwarded snooped packet to server (%d bytes)\n", packet.messageLength);
-                fflush(stdout);
             } else {
                 printf("Error: Snoop recv error [%s]\n", strerror(errno));
                 exit(EXIT_FAILURE);
@@ -157,7 +158,6 @@ void connectServer() {
     serverSocketInfo.sin_addr.s_addr = serverIP;
 
     printf("Connecting to server %s on port %d\n", inet_ntoa(serverSocketInfo.sin_addr), SERVER_PORT);
-    fflush(stdout);
 
     // Attempt to connect to the server
     if (connect(serverHandle, (struct sockaddr*) &serverSocketInfo, sizeof(serverSocketInfo)) != 0) {
@@ -173,7 +173,6 @@ void connectServer() {
         exit(EXIT_FAILURE);
     } else if (strcmp(recvBuf, SERVER_HANDSHAKE) == 0) {
         printf("Connected to server\n");
-        fflush(stdout);
     } else {
         printf("Error: Invalid server handshake [%s]\n", strerror(errno));
         exit(EXIT_FAILURE);
