@@ -29,6 +29,8 @@ int32_t snoopHandle = -1;
 char recvBuf[1024];
 char dataBuf[1024];
 
+uint32_t prevPacketIdent = 0;
+
 int main(int argc, char * argv[]) {
     serverIP = argc > 1 ? inet_addr(argv[1]) : inet_addr("127.0.0.1");
 
@@ -93,6 +95,13 @@ int main(int argc, char * argv[]) {
                 // Repackage and forward to control server
                 SnoopResponse* response = (SnoopResponse*) recvBuf;
                 SnoopedPacket packet = { .requestIdent = htonl(response->requestIdent), .packetIdent = htonl(response->packetIdent) };
+
+                // Taubman's server has a bug where it will sometimes send duplicates
+                // Check packetIdent to discard these
+                if (packet.packetIdent == prevPacketIdent) {
+                    continue;
+                }
+
                 // Message length is recv size - two identifiers
                 packet.messageLength = rec - 8;
                 memcpy(packet.message, response->message, packet.messageLength);
