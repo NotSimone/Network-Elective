@@ -76,7 +76,7 @@ int main(int argc, char * argv[]) {
                 if (sendAllTo(snoopHandle, (char*)&request, sizeof(SnoopRequest), &snoopAddr) == 0) {
                     printf("Sent snoop request (requestNum: %u, requestIdent: %u)\n", requestNum, requestIdent);
                 } else {
-                    printf("Error: Could not forward snoop request (requestNum: %u, requestIdent: %u) [%s]\n", requestNum, requestIdent, strerror(errno));
+                    printf("Error: Could not send snoop request (requestNum: %u, requestIdent: %u) [%s]\n", requestNum, requestIdent, strerror(errno));
                     exit(EXIT_FAILURE);
                 }
             } else if (rec == 0 || rec == 1) {
@@ -110,7 +110,7 @@ int main(int argc, char * argv[]) {
                 
                 // New packet is larger because of the messageLength field
                 sendAll(serverHandle, (char*) &packet, rec + 4);
-                printf("Forwarded snooped packet to server (%d bytes)\n", packet.messageLength);
+                printf("Forwarded snooped packet to server (requestIdent: %u, packetIdent: %u)\n", packet.requestIdent, packet.packetIdent);
             } else {
                 printf("Error: Snoop recv error [%s]\n", strerror(errno));
                 exit(EXIT_FAILURE);
