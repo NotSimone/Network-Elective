@@ -8,7 +8,7 @@ import time
 from server import Server, SnoopedPacket
 
 SNOOP_SERVER_IP = "149.171.36.192"
-SNOOP_SERVER_PORT = 8154
+SNOOP_SERVER_PORT = 8152
 HTTP_SERVER_PORT = 8800
 
 bitrate = 1000
