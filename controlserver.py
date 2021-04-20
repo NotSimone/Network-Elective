@@ -14,6 +14,7 @@ HTTP_SERVER_PORT = 8080
 
 snooped_packets: "Queue[SnoopedPacket]" = Queue()
 pkts = {}
+mod = []
 
 with Server() as server:
     # Connect and configure the clients
@@ -26,10 +27,21 @@ with Server() as server:
     
     while True:
         
-        server.send_snoop_req(0, 1, ident)
-        time.sleep(0.05)
-        server.send_snoop_req(1, 2, ident)
-        time.sleep(0.05)
+        if client_count == 1:
+            server.send_snoop_req(0, 1, ident)
+            time.sleep(0.1)
+        elif client_count == 2:
+            server.send_snoop_req(0, 1, ident)
+            time.sleep(0.1)
+            server.send_snoop_req(1, 2, ident)
+            time.sleep(0.1)
+        elif client_count == 3:
+            server.send_snoop_req(0, 1, ident)
+            time.sleep(0.05)
+            server.send_snoop_req(1, 2, ident)
+            time.sleep(0.05)
+            server.send_snoop_req(2, 3, ident)
+            time.sleep(0.05)
         ident += 1
         
 
@@ -40,6 +52,7 @@ with Server() as server:
             eom = -1
             for key, value in pkts.items():
                 unique_pkts[value%ttl_no_unique] = key
+                mod.append(value%ttl_no_unique)
                 if '\x04' in key:
                     eom = value%ttl_no_unique
             
@@ -112,7 +125,9 @@ with Server() as server:
                 for packet in server.get_snooped_packet(conn):
                     print(f"Got {packet.request_ident};{packet.packet_ident};{packet.message}")
                     snooped_packets.put(packet)
-                    #pkts[packet.packet_ident] = packet.message
+                    if(time.perf_counter()-start > 10):
+                        if packet.packet_ident%ttl_no_unique not in mod:
+                            unique_pkts[packet.packet_ident%ttl_no_unique] = packet.message
                     pkts[packet.message] = packet.packet_ident
             except ConnectionAbortedError:
                 print(f"Client {server.connections.index(conn)} closed connection")
