@@ -111,17 +111,11 @@ def reconstruct_message() -> bool:
 
     # Get list of differences in length and determine possible message lengths
     eof_diff = [eof[x+1] - eof[x] for x in range(len(eof) - 1)]
-    possible_message_len = factors(min(eof_diff))
-
-    # If there is only one possible message length
-    if len(possible_message_len) == 1:
-        message_length = possible_message_len[0]
-    if len(possible_message_len) == 2:
-        message_length = possible_message_len[1]
+    possible_message_len = [x for x in factors(min(eof_diff)) if x not in invalid_message_length]
 
     # Check each possible message length
-    for x in possible_message_len:
-        message = validate_message_len(x)
+    for message_len in possible_message_len:
+        message = validate_message_len(message_len)
         if (message):
             # Send the whole message to the server
             return True if send_message(message) else False
@@ -131,10 +125,6 @@ def reconstruct_message() -> bool:
 # Attempt to construct a message with length
 # Returns empty string on fail
 def validate_message_len(length: int) -> str:
-    # If message length is bad, return early
-    if length in invalid_message_length:
-        return ""
-
     messages: List[str] = [""] * length
     # Check validity using all the packets we found so far
     for x in all_packets:
