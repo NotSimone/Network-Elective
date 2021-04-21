@@ -118,7 +118,7 @@ def reconstruct_message() -> bool:
         message = validate_message_len(message_len)
         if (message):
             # Send the whole message to the server
-            return True if send_message(message) else False
+            return send_message(message)
     
     return False
     
