@@ -1,0 +1,4 @@
+This is a sample message
+with new-lines and ...
+just like that.
+ends with a single new-line to which we add the ctrl-D
