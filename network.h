@@ -11,8 +11,6 @@
     #include <unistd.h>
 #endif
 
-#define SERVER_PORT 7209
-
 #define CLIENT_HANDSHAKE "snooping-client-handshake"
 #define SERVER_HANDSHAKE "snooping-server-handshake"
 

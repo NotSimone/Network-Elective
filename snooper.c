@@ -30,9 +30,11 @@ char recvBuf[1024];
 char dataBuf[1024];
 
 uint32_t prevPacketIdent = 0;
+uint32_t serverPort;
 
 int main(int argc, char * argv[]) {
     serverIP = argc > 1 ? inet_addr(argv[1]) : inet_addr("127.0.0.1");
+    serverPort = argc > 2 ? atoi(argv[2]) : 7200;
 
     connectServer();
     struct sockaddr_in snoopAddr = getConfig();
@@ -154,10 +156,10 @@ void connectServer() {
     // Configure and bind the socket
     struct sockaddr_in serverSocketInfo = {0};
     serverSocketInfo.sin_family = AF_INET;
-    serverSocketInfo.sin_port = htons(SERVER_PORT);
+    serverSocketInfo.sin_port = htons(serverPort);
     serverSocketInfo.sin_addr.s_addr = serverIP;
 
-    printf("Connecting to server %s on port %d\n", inet_ntoa(serverSocketInfo.sin_addr), SERVER_PORT);
+    printf("Connecting to server %s on port %d\n", inet_ntoa(serverSocketInfo.sin_addr), serverPort);
 
     // Attempt to connect to the server
     if (connect(serverHandle, (struct sockaddr*) &serverSocketInfo, sizeof(serverSocketInfo)) != 0) {
