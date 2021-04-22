@@ -22,7 +22,7 @@ def main() -> None:
         client_count = 1 if len(sys.argv) < 2 else int(sys.argv[1])
         bitrate = 1000 if len(sys.argv) < 3 else int(sys.argv[2])
         # Detection timeout
-        timeout = 50 / bitrate
+        timeout = 55 / bitrate
 
         server.connect_clients(client_count)
         server.config_clients(ip=SNOOP_SERVER_IP, port=SNOOP_SERVER_PORT)
@@ -51,8 +51,14 @@ def main() -> None:
                 
 
             # Select on one of the clients returning data
-            readable, _, exceptions = select(server.connections, [], server.connections)
+            readable, _, exceptions = select(server.connections, [], server.connections, 1500/bitrate)
             conn: socket.socket
+
+            # If we timeout for whatever reason, retry
+            if len(readable) == len(exceptions) == 0:
+                print(f"Timeout - retrying")
+                client_responses = client_count
+                continue
 
             for conn in exceptions:
                 print(f"Something has gone wrong with client {server.connections.index(conn)}")
