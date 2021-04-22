@@ -1,5 +1,7 @@
 from typing import List, Set
+
 from Server import Server, SnoopedPacket
+
 
 class MessageReconstructor:
     all_packets: List[SnoopedPacket] = []           # All packets we capture
