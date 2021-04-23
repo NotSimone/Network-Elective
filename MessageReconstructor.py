@@ -51,7 +51,7 @@ class MessageReconstructor:
                 self.confirmed_message_length = possible_message_len[0]
             elif len(possible_message_len) == 0:
                 print(f"Error: 0 length message len - resetting")
-                self = MessageReconstructor()
+                self.__init__()
         else:
             possible_message_len = [self.confirmed_message_length]
 
@@ -76,6 +76,7 @@ class MessageReconstructor:
             else:
                 # On mismatch, mark length as invalid and return
                 if messages[index] != x.message:
+                    print(f"Bad length: {length}")
                     self.invalid_message_length.append(length)
                     return ""
 
