@@ -4,17 +4,26 @@ from Server import Server, SnoopedPacket
 
 
 class MessageReconstructor:
-    all_packets: List[SnoopedPacket] = []           # All packets we capture
-    invalid_message_length: List[int] = list()      # Message lengths confirmed bad
+    all_packets: List[SnoopedPacket]                # All packets we capture
+    packet_ids: Set[int]                             # Set of packet ids
+    invalid_message_length: List[int]               # Message lengths confirmed bad
     start_ident: int                                # Identifier for a starting message
-    confirmed_message_length: int = -1
+    confirmed_message_length: int
     eof: List[int]
 
     def __init__(self) -> None:
         self.all_packets = list()
+        self.packet_ids = set()
         self.invalid_message_length = list()
         self.start_ident = -1
         self.confirmed_message_length = -1
+
+    # Add a packet
+    def add_packet(self, packet: SnoopedPacket) -> None:
+        # Make sure we dont add duplicate packets
+        if packet.packet_ident not in self.packet_ids:
+            self.packet_ids.add(packet.packet_ident)
+            self.all_packets.append(packet)
 
     # Attempt to reconstruct the whole message
     # Returns the message if it can reconstruct it or else return an empty string

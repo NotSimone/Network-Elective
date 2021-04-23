@@ -73,7 +73,7 @@ def main() -> None:
                 try:
                     for packet in server.get_snooped_packet(conn):
                         print(f"Got {packet.request_ident};{packet.packet_ident};{packet.message}")
-                        message_reconstructor.all_packets.append(packet)
+                        message_reconstructor.add_packet(packet)
                 except ConnectionAbortedError:
                     print(f"Client {server.connections.index(conn)} closed connection")
                     exit()
