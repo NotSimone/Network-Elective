@@ -5,7 +5,7 @@ from Server import Server, SnoopedPacket
 
 class MessageReconstructor:
     all_packets: List[SnoopedPacket]                # All packets we capture
-    packet_ids: Set[int]                             # Set of packet ids
+    packet_ids: Set[int]                            # Set of packet ids
     invalid_message_length: List[int]               # Message lengths confirmed bad
     start_ident: int                                # Identifier for a starting message
     confirmed_message_length: int

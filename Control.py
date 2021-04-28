@@ -52,7 +52,7 @@ def main() -> None:
                     # Send snoop requests to all clients
                     # Make sure we send requests with offset queue positions
                     for n in range(client_count):
-                        server.send_snoop_req(n, 1 + n, ident)
+                        server.send_snoop_req(n, 1 + 2*n, ident)
                         ident += 1
 
                 # If we timeout 20 times (20 * 50 char = 1000 char, which is time to lengthen queue)
